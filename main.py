@@ -3,7 +3,7 @@ from tensorflow.keras.layers import *
 from tensorflow.keras import Model
 from tensorflow import keras
 from utils import *
-from model.multihead import MultiHeadAttention
+from model.attention import MultiHeadAttention
 
 train = pd.read_csv('data/train.csv')
 test = pd.read_csv('data/test.csv')
