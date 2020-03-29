@@ -3,37 +3,28 @@ from tensorflow.keras import Model
 from tensorflow.keras.layers import *
 
 
-class Embedding(Model):
-    def __init__(self):
-        super(Embedding,self).__init__()
+class InputEmbedding(Model):
+    def __init__(self,
+                 vocab_size,
+                 hidden_size,
+                 max_position):
+        super(InputEmbedding, self).__init__()
+        self.max_position = max_position
+        self.hidden_size = hidden_size
+        self.token_embedding = Embedding(vocab_size, hidden_size)
+        self.segment_embedding = Embedding(2, hidden_size)
+        initializer = tf.random_uniform_initializer()
+        self.position_embedding = tf.Variable(initial_value=initializer([self.max_position, self.hidden_size]))
 
-        full_position_embeddings = tf.get_variable(
-            name=position_embedding_name,
-            shape=[max_position_embeddings, width],
-            initializer=create_initializer(initializer_range))
-        # Since the position embedding table is a learned variable, we create it
-        # using a (long) sequence length `max_position_embeddings`. The actual
-        # sequence length might be shorter than this, for faster training of
-        # tasks that do not have long sequences.
-        #
-        # So `full_position_embeddings` is effectively an embedding table
-        # for position [0, 1, 2, ..., max_position_embeddings-1], and the current
-        # sequence has positions [0, 1, 2, ... seq_length-1], so we can just
-        # perform a slice.
-        position_embeddings = tf.slice(full_position_embeddings, [0, 0],
-                                       [seq_length, -1])
-        num_dims = len(output.shape.as_list())
+    def call(self, inputs, training=None, mask=None):
+        batch_size, seq_len = inputs.shape[0], inputs.shape[1]
+        position_embedding = self.position_embedding[:seq_len]
+        position_embedding = tf.expand_dims(position_embedding, 0)
+        token_embedding = self.token_embedding(inputs)
+        segment_embedding = self.segment_embedding(inputs)
+        return token_embedding + segment_embedding + position_embedding
 
-        # Only the last two dimensions are relevant (`seq_length` and `width`), so
-        # we broadcast among the first dimensions, which is typically just
-        # the batch size.
-        position_broadcast_shape = []
-        for _ in range(num_dims - 2):
-            position_broadcast_shape.append(1)
-        position_broadcast_shape.extend([seq_length, width])
-        position_embeddings = tf.reshape(position_embeddings,
-                                         position_broadcast_shape)
-        output += position_embeddings
 
-        output = layer_norm_and_dropout(output, dropout_prob)
-        return output
+if __name__ == '__main__':
+    em = InputEmbedding(1000, 256, 512)
+    em(tf.random.uniform([32, 100]))

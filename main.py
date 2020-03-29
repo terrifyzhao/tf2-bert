@@ -3,7 +3,7 @@ from tensorflow.keras.layers import *
 from tensorflow.keras import Model
 from tensorflow import keras
 from utils import *
-from model.attention import MultiHeadAttention
+from model.transformer import TransformerEncoder
 
 train = pd.read_csv('data/train.csv')
 test = pd.read_csv('data/test.csv')
@@ -19,13 +19,13 @@ test_ds = tf.data.Dataset.from_tensor_slices((test_x, test['label'].values)).bat
 class MyModel(Model):
     def __init__(self):
         super(MyModel, self).__init__()
-        self.layer = MultiHeadAttention(12, 768)
-        self.embedding = Embedding(411, 768)
+        self.layer = TransformerEncoder(12, 768, 768, 411, 512)
+        # self.embedding = Embedding(411, 768)
         self.d1 = Dense(10, activation='softmax')
 
     def call(self, inputs, training=None, mask=None):
-        x = self.embedding(inputs)
-        x = self.layer([x, x, x])
+        # x = self.embedding(inputs)
+        x = self.layer(inputs)
         x = tf.reduce_mean(x, axis=1)
         x = self.d1(x)
         return x
