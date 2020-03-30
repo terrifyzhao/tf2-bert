@@ -1,6 +1,6 @@
 import tensorflow as tf
 from tensorflow.keras import Model
-from model.attention import MultiHeadAttention
+from model.attention import SelfAttention
 from model.embedding import InputEmbedding
 from tensorflow.keras.layers import *
 import numpy as np
@@ -8,55 +8,29 @@ import numpy as np
 
 class TransformerEncoder(Model):
     def __init__(self,
-                 n_head,
-                 hidden_size,
-                 intermediate_size,
-                 vocab_size,
-                 max_position):
+                 num_attention_heads,  # attention 头数
+                 num_hidden_layers,  # tm层数
+                 hidden_size,  # embedding维度
+                 intermediate_size,  # FeedForward隐藏层维度
+                 vocab_size,  # 词典大小
+                 max_position_embeddings,  # 最大长度
+                 hidden_dropout_prob,
+                 **kwargs):
         super(TransformerEncoder, self).__init__()
-        self.input_embedding = InputEmbedding(vocab_size, hidden_size, max_position)
-        self.attention = MultiHeadAttention(n_head, hidden_size)
-        self.layerNorm = LayerNormalization()
-        self.fnn = FeedForward(hidden_size, intermediate_size)
+        self.num_hidden_layers = num_hidden_layers
+        self.input_embedding = InputEmbedding(vocab_size, hidden_size, max_position_embeddings, hidden_dropout_prob)
+        self.self_attention = []
+        for i in range(num_attention_heads):
+            self.self_attention.append(SelfAttention(num_attention_heads,  # attention 头数
+                                                     hidden_size,  # embedding维度
+                                                     intermediate_size,  # FeedForward隐藏层维度
+                                                     hidden_dropout_prob))
 
     def call(self, inputs, training=None, mask=None):
         out = self.input_embedding(inputs)
-        out = self.attention([out, out, out])
-        out = out + inputs
-        out = self.layerNorm(out)
-        out = out + self.fnn(out)
-        out = self.layerNorm(out)
+        for attention in self.self_attention:
+            out = attention(out)
         return out
-
-
-class FeedForward(Model):
-    def __init__(self,
-                 hidden_size,
-                 intermediate_size):
-        super(FeedForward, self).__init__()
-        self.d1 = Dense(intermediate_size, activation=gelu)
-        self.d2 = Dense(hidden_size)
-
-    def call(self, inputs, training=None, mask=None):
-        out = self.d1(inputs)
-        out = self.d2(out)
-        return out
-
-
-def gelu(x):
-    """Gaussian Error Linear Unit.
-
-    This is a smoother version of the RELU.
-    Original paper: https://arxiv.org/abs/1606.08415
-    Args:
-      x: float Tensor to perform activation.
-
-    Returns:
-      `x` with the GELU activation applied.
-    """
-    cdf = 0.5 * (1.0 + tf.tanh(
-        (np.sqrt(2 / np.pi) * (x + 0.044715 * tf.pow(x, 3)))))
-    return x * cdf
 
 
 if __name__ == '__main__':
