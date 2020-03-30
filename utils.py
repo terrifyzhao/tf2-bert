@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import jieba
+import tensorflow as tf
 
 vocab = pd.read_csv('data/vocab.txt', header=None)
 dictionary = dict(zip(vocab[0].values, vocab.index.values))
@@ -46,3 +47,8 @@ def padding_seq(X, max_len=15):
     return np.array([
         np.concatenate([x, [0] * (max_len - len(x))]) if len(x) < max_len else x[:max_len] for x in X
     ])
+
+
+def create_initializer(initializer_range=0.02):
+    """Creates a `truncated_normal_initializer` with the given range."""
+    return tf.keras.initializers.TruncatedNormal(stddev=initializer_range)
