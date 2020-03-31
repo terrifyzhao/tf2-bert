@@ -1,13 +1,15 @@
 import json
-from model.transformer import TransformerEncoder
+from model.transformer import Bert
+from model.config import BertConfig
 
 
 def build_bert(config_path):
-    configs = {}
+    # configs = {}
 
-    if config_path:
-        configs.update(json.load(open(config_path)))
-    model = TransformerEncoder(**configs)
+    # if config_path:
+    #     configs.update(json.load(open(config_path)))
+    configs = BertConfig()
+    model = Bert(configs, name='bert')
     return model
 
 

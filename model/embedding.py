@@ -5,30 +5,27 @@ from utils import create_initializer
 
 class InputEmbedding(Layer):
     def __init__(self,
-                 vocab_size,
-                 hidden_size,
-                 max_position,
-                 dropout_rate,
-                 initializer_range):
-        super(InputEmbedding, self).__init__()
-        self.max_position = max_position
-        self.hidden_size = hidden_size
+                 config,
+                 **kwargs):
+        super(InputEmbedding, self).__init__(**kwargs)
+        self.max_position = config.max_position_embeddings
+        self.hidden_size = config.hidden_size
         # 词向量
-        self.token_embedding = Embedding(vocab_size,
-                                         hidden_size,
+        self.token_embedding = Embedding(config.vocab_size,
+                                         config.hidden_size,
                                          name='word_embeddings',
-                                         embeddings_initializer=create_initializer(initializer_range))
+                                         embeddings_initializer=create_initializer(config.initializer_range))
         # 段落向量
-        self.segment_embedding = Embedding(2, hidden_size,
+        self.segment_embedding = Embedding(2, config.hidden_size,
                                            name='token_type_embeddings',
-                                           embeddings_initializer=create_initializer(initializer_range))
+                                           embeddings_initializer=create_initializer(config.initializer_range))
         # 位置向量
         self.position_embedding = Embedding(self.max_position,
                                             self.hidden_size,
                                             name='position_embeddings',
-                                            embeddings_initializer=create_initializer(initializer_range))
+                                            embeddings_initializer=create_initializer(config.initializer_range))
         # drop_out & layer_normal
-        self.drop_out = Dropout(dropout_rate)
+        self.drop_out = Dropout(config.hidden_dropout_prob)
         self.layer_normal = LayerNormalization(name="LayerNorm")
 
     def call(self, inputs, training=None, mask=None):
