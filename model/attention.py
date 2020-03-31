@@ -1,10 +1,11 @@
 import tensorflow as tf
-from tensorflow.keras import Model
 from tensorflow.keras.layers import *
+from tensorflow.keras.layers import Layer
 import numpy as np
+from utils import create_initializer
 
 
-class Attention(Model):
+class Attention(Layer):
     def __init__(self, d_k):
         super(Attention, self).__init__()
         self.d_k = d_k
@@ -24,23 +25,23 @@ class Attention(Model):
         return out
 
 
-class MultiHeadAttention(Model):
+class MultiHeadAttention(Layer):
     def __init__(self,
                  n_head,
                  hidden_size,
-                 dropout_rate=0.1):
+                 dropout_rate,
+                 initializer_range):
         super(MultiHeadAttention, self).__init__()
         self.n_head = n_head
         self.head_size = hidden_size
         self.d_k = hidden_size // n_head
         self.dropout_rate = dropout_rate
         self.attention = Attention(self.d_k)
-        self.q_matrix = Dense(hidden_size, name='query')
-        self.k_matrix = Dense(hidden_size, name='key')
-        self.v_matrix = Dense(hidden_size, name='value')
-        self.head_matrix = Dense(hidden_size, name='output')
-        self.layer_norm = LayerNormalization(name='LayerNorm')
-        self.name = 'layer'
+
+        self.q_matrix = Dense(hidden_size, kernel_initializer=create_initializer(initializer_range), name='query')
+        self.k_matrix = Dense(hidden_size, kernel_initializer=create_initializer(initializer_range), name='key')
+        self.v_matrix = Dense(hidden_size, kernel_initializer=create_initializer(initializer_range), name='value')
+        self.head_matrix = Dense(hidden_size)
 
     def call(self, inputs, training=None, mask=None):
         query, key, value = inputs
@@ -59,14 +60,15 @@ class MultiHeadAttention(Model):
         return out
 
 
-class SelfAttention(Model):
+class SelfAttention(Layer):
     def __init__(self,
                  num_attention_heads,  # attention 头数
                  hidden_size,  # embedding维度
                  intermediate_size,  # FeedForward隐藏层维度
-                 hidden_dropout_prob):
+                 hidden_dropout_prob,
+                 initializer_range):
         super(SelfAttention, self).__init__()
-        self.attention = MultiHeadAttention(num_attention_heads, hidden_size)
+        self.attention = MultiHeadAttention(num_attention_heads, hidden_size, initializer_range, name='self')
         self.drop_out = Dropout(hidden_dropout_prob)
         self.layerNorm2 = LayerNormalization()
         self.fnn = FeedForward(hidden_size, intermediate_size)
@@ -81,7 +83,7 @@ class SelfAttention(Model):
         return out
 
 
-class FeedForward(Model):
+class FeedForward(Layer):
     def __init__(self,
                  hidden_size,
                  intermediate_size):

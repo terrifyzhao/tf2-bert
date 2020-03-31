@@ -15,10 +15,11 @@ class TransformerEncoder(Model):
                  vocab_size,  # 词典大小
                  max_position_embeddings,  # 最大长度
                  hidden_dropout_prob,
+                 initializer_range,  # 初始化权重时的标准差
                  **kwargs):
         super(TransformerEncoder, self).__init__()
         self.num_hidden_layers = num_hidden_layers
-        self.input_embedding = InputEmbedding(vocab_size, hidden_size, max_position_embeddings, hidden_dropout_prob)
+        self.input_embedding = InputEmbedding(vocab_size, hidden_size, max_position_embeddings, hidden_dropout_prob,initializer_range)
         self.self_attention = []
         for i in range(num_attention_heads):
             self.self_attention.append(SelfAttention(num_attention_heads,  # attention 头数
