@@ -35,10 +35,12 @@ class MultiHeadAttention(Model):
         self.d_k = hidden_size // n_head
         self.dropout_rate = dropout_rate
         self.attention = Attention(self.d_k)
-        self.q_matrix = Dense(hidden_size)
-        self.k_matrix = Dense(hidden_size)
-        self.v_matrix = Dense(hidden_size)
-        self.head_matrix = Dense(hidden_size)
+        self.q_matrix = Dense(hidden_size, name='query')
+        self.k_matrix = Dense(hidden_size, name='key')
+        self.v_matrix = Dense(hidden_size, name='value')
+        self.head_matrix = Dense(hidden_size, name='output')
+        self.layer_norm = LayerNormalization(name='LayerNorm')
+        self.name = 'layer'
 
     def call(self, inputs, training=None, mask=None):
         query, key, value = inputs
@@ -53,7 +55,7 @@ class MultiHeadAttention(Model):
         out = self.attention(inputs=[q, k, v])
         out = tf.reshape(out, [-1, tf.shape(out)[2], self.head_size])
         out = self.head_matrix(out)
-
+        out = self.layer_norm(out)
         return out
 
 
@@ -66,7 +68,6 @@ class SelfAttention(Model):
         super(SelfAttention, self).__init__()
         self.attention = MultiHeadAttention(num_attention_heads, hidden_size)
         self.drop_out = Dropout(hidden_dropout_prob)
-        self.layerNorm1 = LayerNormalization()
         self.layerNorm2 = LayerNormalization()
         self.fnn = FeedForward(hidden_size, intermediate_size)
 

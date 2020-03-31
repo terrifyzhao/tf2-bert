@@ -13,18 +13,14 @@ class InputEmbedding(Model):
         self.max_position = max_position
         self.hidden_size = hidden_size
         # 词向量
-        self.token_embedding = Embedding(vocab_size, hidden_size)
+        self.token_embedding = Embedding(vocab_size, hidden_size, name='word_embedding')
         # 段落向量
-        self.segment_embedding = Embedding(2, hidden_size)
+        self.segment_embedding = Embedding(2, hidden_size, name='token_type_embedding')
         # 位置向量
-        # initializer = tf.random_uniform_initializer()
-        # self.position_embedding = tf.Variable(initial_value=initializer([self.max_position, self.hidden_size]),
-        #                                       name="position_embeddings",
-        #                                       trainable=True)
-        self.position_embedding = Embedding(self.max_position, self.hidden_size)
+        self.position_embedding = Embedding(self.max_position, self.hidden_size, name='position_embedding')
         # drop_out & layer_normal
         self.drop_out = Dropout(dropout_rate)
-        self.layer_normal = LayerNormalization()
+        self.layer_normal = LayerNormalization(name='LayerNorm')
 
     def call(self, inputs, training=None, mask=None):
         token, segment = inputs
