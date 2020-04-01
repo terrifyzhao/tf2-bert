@@ -1,7 +1,7 @@
-from tensorflow.keras import Model
 from model.multiheadattention import EncoderLayer
 from model.embedding import InputEmbedding
 from tensorflow.keras.layers import *
+import tensorflow as tf
 
 
 class TransformerEncoder(Layer):
@@ -23,7 +23,7 @@ class TransformerEncoder(Layer):
         return out
 
 
-class Bert(Model):
+class Bert(Layer):
     def __init__(self,
                  config,
                  **kwargs):
@@ -40,12 +40,3 @@ class Bert(Model):
         return out
 
 
-# class Bert(object):
-#     def __init__(self,
-#                  config):
-#         super(Bert, self).__init__()
-#         self.bert = BertEncoder(config, name='bert')
-#
-#     def predict(self, inputs):
-#         out = self.bert(inputs)
-#         return out

@@ -72,14 +72,14 @@ class MultiHeadAttention(Layer):
         key = tf.reshape(key, [-1, self.num_attention_heads, tf.shape(key)[1], self.d_k])
         value = tf.reshape(value, [-1, self.num_attention_heads, tf.shape(value)[1], self.d_k])
 
-        if query.ndim == 4:
+        if len(query.shape) == 4:
             query = tf.expand_dims(query, 2)
             key = tf.expand_dims(key, 2)
             value = tf.expand_dims(value, 2)
         out = tf.matmul(query, tf.transpose(key, [0, 1, 2, 4, 3])) / (self.d_k ** 0.5)
         out = tf.nn.softmax(out)
         out = tf.matmul(out, value)
-        if out.ndim == 5:
+        if len(out.shape) == 5:
             out = tf.squeeze(out, axis=2)
 
         out = tf.reshape(out, [-1, tf.shape(out)[2], self.hidden_size])
