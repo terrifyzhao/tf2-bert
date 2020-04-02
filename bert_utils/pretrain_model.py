@@ -1,16 +1,24 @@
-import json
-from model.transformer import Bert
-from model.config import BertConfig
+from bert_utils.model.transformer import Bert
+from bert_utils.config import BertConfig
 import tensorflow as tf
+from tensorflow.keras import Input, Model
 
 
-def build_bert(config_path):
+def build_bert(config_path, checkpoint_path, max_seq_len, batch_size):
     # configs = {}
 
     # if config_path:
     #     configs.update(json.load(open(config_path)))
     configs = BertConfig()
     model = Bert(configs, name='bert')
+
+    l_input_ids = Input(shape=(max_seq_len,), batch_size=batch_size, dtype='int32')
+    l_token_type_ids = Input(shape=(max_seq_len,), batch_size=batch_size, dtype='int32')
+
+    output = model([l_input_ids, l_token_type_ids])
+    model = Model(inputs=[l_input_ids, l_token_type_ids], outputs=output)
+    load_check_weights(model, checkpoint_path)
+
     return model
 
 

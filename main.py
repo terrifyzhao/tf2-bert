@@ -1,9 +1,8 @@
-import tensorflow as tf
 from tensorflow.keras.layers import *
 from tensorflow.keras import Model
 from tensorflow import keras
-from utils import *
-from model.transformer import TransformerEncoder
+from bert_utils.utils import *
+from bert_utils.model.transformer import TransformerEncoder
 
 train = pd.read_csv('data/train.csv')
 test = pd.read_csv('data/test.csv')

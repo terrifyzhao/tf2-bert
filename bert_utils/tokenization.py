@@ -71,6 +71,11 @@ class Tokenizer(object):
         for word in clean_text.strip().split():
             tokens.extend(self._word_piece_tokenize(word))
 
+        if self.token_start is not None:
+            tokens.insert(0, self.token_start)
+        if self.token_end is not None:
+            tokens.append(self.token_end)
+
         return tokens
 
     def _word_piece_tokenize(self, word):
@@ -100,7 +105,7 @@ class Tokenizer(object):
     def encode(self,
                first_text,
                second_text=None,
-               max_length=None,
+               max_length=512,
                first_length=None,
                second_length=None):
         """输出文本对应token id和segment id
@@ -242,6 +247,6 @@ def is_whitespace(ch):
 
 
 if __name__ == '__main__':
-    tokenize = Tokenizer('chinese_L-12_H-768_A-12/vocab.txt')
+    tokenize = Tokenizer('../chinese_L-12_H-768_A-12/vocab.txt')
     a = tokenize.encode('奥术\t大hit师&(*%^&大所, 大所!!!  多')
     print(a)

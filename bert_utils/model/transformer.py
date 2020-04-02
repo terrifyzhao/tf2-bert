@@ -1,5 +1,5 @@
-from model.multiheadattention import EncoderLayer
-from model.embedding import InputEmbedding
+from bert_utils.model.attention import EncoderLayer
+from bert_utils.model.embedding import InputEmbedding
 from tensorflow.keras.layers import *
 
 import tensorflow as tf

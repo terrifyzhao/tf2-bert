@@ -1,6 +1,6 @@
 import tensorflow as tf
 from tensorflow.keras.layers import *
-from utils import create_initializer
+from bert_utils.utils import create_initializer
 
 
 class InputEmbedding(Layer):
@@ -16,7 +16,8 @@ class InputEmbedding(Layer):
                                          name='word_embeddings',
                                          embeddings_initializer=create_initializer(config.initializer_range))
         # 段落向量
-        self.segment_embedding = Embedding(2, config.hidden_size,
+        self.segment_embedding = Embedding(2,
+                                           config.hidden_size,
                                            name='token_type_embeddings',
                                            embeddings_initializer=create_initializer(config.initializer_range))
         # 位置向量
