@@ -19,6 +19,7 @@ class PreTrainModel(object):
                  checkpoint_path,
                  dict_path):
         configs = BertConfig()
+        self.max_seq_len = max_seq_len
         self.bert = Bert(configs, name='bert')
         self.dict_path = dict_path
 
@@ -37,7 +38,7 @@ class PreTrainModel(object):
         token_ids = []
         segment_ids = []
         for s in inputs:
-            token_id, segment_id = tokenizer.encode(s)
+            token_id, segment_id = tokenizer.encode(s, max_length=self.max_seq_len)
             token_ids.append(token_id)
             segment_ids.append(segment_id)
         return self.model([np.array(token_ids), np.array(segment_ids)])
