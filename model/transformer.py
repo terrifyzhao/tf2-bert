@@ -1,6 +1,7 @@
 from model.multiheadattention import EncoderLayer
 from model.embedding import InputEmbedding
 from tensorflow.keras.layers import *
+
 import tensorflow as tf
 
 
@@ -19,7 +20,7 @@ class TransformerEncoder(Layer):
     def call(self, inputs, training=None, mask=None):
         out = inputs
         for attention in self.self_attention:
-            out = attention(out)
+            out = attention(out, mask=mask)
         return out
 
 
@@ -35,8 +36,18 @@ class Bert(Layer):
                                           name='encoder')  # 初始化权重时的标准差
 
     def call(self, inputs, training=None, mask=None):
+        if mask is None:
+            mask = self.compute_mask(inputs)
         out = self.input_embedding(inputs)
-        out = self.encoder(out)
+        out = self.encoder(out, mask=mask)
         return out
 
+    def compute_mask(self, inputs, mask=None):
+        if isinstance(inputs, list):
+            assert 2 == len(inputs), "Expecting inputs to be a [input_ids, token_type_ids] list"
+            input_ids, token_type_ids = inputs
+        else:
+            input_ids = inputs
+            token_type_ids = None
 
+        return tf.cast(tf.not_equal(input_ids, 0), 'float32')

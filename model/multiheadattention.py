@@ -2,7 +2,7 @@ import tensorflow as tf
 from tensorflow.keras.layers import *
 from tensorflow.keras.layers import Layer
 import numpy as np
-from utils import create_initializer
+from utils import create_initializer, mask_op
 
 
 class EncoderLayer(Layer):
@@ -21,7 +21,7 @@ class EncoderLayer(Layer):
                                        name='output')
 
     def call(self, inputs, training=None, mask=None):
-        attention_out = self.attention([inputs, inputs, inputs])
+        attention_out = self.attention([inputs, inputs, inputs], mask=mask)
         out = self.intermediate(attention_out)
         out = self.attention_output([attention_out, out])
         return out
@@ -40,7 +40,7 @@ class SelfAttention(Layer):
         self.attention_out = AttentionOutput(config, name='output')
 
     def call(self, inputs, training=None, mask=None):
-        out = self.attention(inputs)
+        out = self.attention(inputs, mask=mask)
         out = self.attention_out(out)
         return out
 
@@ -77,13 +77,14 @@ class MultiHeadAttention(Layer):
             key = tf.expand_dims(key, 2)
             value = tf.expand_dims(value, 2)
         out = tf.matmul(query, tf.transpose(key, [0, 1, 2, 4, 3])) / (self.d_k ** 0.5)
+        out = mask_op(out, mask, mode='add')
         out = tf.nn.softmax(out)
         out = tf.matmul(out, value)
         if len(out.shape) == 5:
             out = tf.squeeze(out, axis=2)
 
         out = tf.reshape(out, [-1, tf.shape(out)[2], self.hidden_size])
-
+        out = mask_op(out, mask, mode='mul')
         return out
 
 
