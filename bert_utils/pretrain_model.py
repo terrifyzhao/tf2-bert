@@ -14,33 +14,49 @@ from bert_utils.config import BertConfig
 
 class PreTrainModel(object):
     def __init__(self,
-                 max_seq_len,
-                 batch_size,
                  checkpoint_path,
-                 dict_path):
+                 dict_path,
+                 first_length=None,
+                 second_length=None):
         configs = BertConfig()
-        self.max_seq_len = max_seq_len
+        self.first_length = first_length
+        self.second_length = second_length
         self.bert = Bert(configs, name='bert')
         self.dict_path = dict_path
 
-        l_input_ids = Input(shape=(max_seq_len,), batch_size=batch_size, dtype='int32')
-        l_token_type_ids = Input(shape=(max_seq_len,), batch_size=batch_size, dtype='int32')
+        l_input_ids = Input(shape=(None,), dtype='int32')
+        l_token_type_ids = Input(shape=(None,), dtype='int32')
 
         output = self.bert([l_input_ids, l_token_type_ids])
         self.model = Model(inputs=[l_input_ids, l_token_type_ids], outputs=output)
         self._load_check_weights(self.model, checkpoint_path)
 
-    def predict(self, inputs):
-        assert type(inputs) == list, "Expecting inputs type must be list"
+    def predict(self, first, second=None):
+        assert type(first) == list, "Expecting inputs type must be list"
         # 建立分词器
         tokenizer = Tokenizer(self.dict_path, do_lower_case=True)
         # 编码测试
         token_ids = []
         segment_ids = []
-        for s in inputs:
-            token_id, segment_id = tokenizer.encode(s, max_length=self.max_seq_len)
-            token_ids.append(token_id)
-            segment_ids.append(segment_id)
+        if self.first_length is None and first:
+            self.first_length = max([len(x) for x in first])
+        if self.second_length is None and second:
+            self.second_length = max([len(x) for x in second])
+        if second:
+            for f, s in zip(first, second):
+                token_id, segment_id = tokenizer.encode(first_text=f,
+                                                        second_text=s,
+                                                        first_length=self.first_length,
+                                                        second_length=self.second_length)
+                token_ids.append(token_id)
+                segment_ids.append(segment_id)
+        else:
+            for f in first:
+                token_id, segment_id = tokenizer.encode(f,
+                                                        first_length=self.first_length,
+                                                        second_length=self.second_length)
+                token_ids.append(token_id)
+                segment_ids.append(segment_id)
         return self.model([np.array(token_ids), np.array(segment_ids)])
 
     def _map_name(self, name):
@@ -62,7 +78,8 @@ class PreTrainModel(object):
         param_values = tf.keras.backend.batch_get_value(bert.weights)
         for ndx, (param_value, param) in enumerate(zip(param_values, bert_params)):
             stock_name = self._map_name(param.name)
-
+            # print(stock_name)
+            # print(param.name)
             if ckpt_reader.has_tensor(stock_name):
                 ckpt_value = ckpt_reader.get_tensor(stock_name)
 

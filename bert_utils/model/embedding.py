@@ -21,13 +21,20 @@ class InputEmbedding(Layer):
                                            name='token_type_embeddings',
                                            embeddings_initializer=create_initializer(config.initializer_range))
         # 位置向量
-        self.position_embedding = Embedding(self.max_position,
-                                            self.hidden_size,
-                                            name='position_embeddings',
-                                            embeddings_initializer=create_initializer(config.initializer_range))
+        # self.position_embedding = Embedding(self.max_position,
+        #                                     self.hidden_size,
+        #                                     name='position_embeddings',
+        #                                     embeddings_initializer=create_initializer(config.initializer_range))
         # drop_out & layer_normal
         self.drop_out = Dropout(config.hidden_dropout_prob)
         self.layer_normal = LayerNormalization(name="LayerNorm")
+
+    def build(self, input_shape):
+        super(InputEmbedding, self).build(input_shape)
+        self.position_embedding = self.add_weight(name='position_embeddings/embeddings',
+                                                  shape=(self.max_position,
+                                                         self.hidden_size),
+                                                  initializer='zeros')
 
     def call(self, inputs, training=None, mask=None):
         token, segment = inputs
@@ -36,10 +43,9 @@ class InputEmbedding(Layer):
 
         # 位置编码
         batch_size, seq_len = token_embedding.shape[0], token_embedding.shape[1]
-        position_ids = tf.keras.backend.arange(seq_len)
-        position_embedding = self.position_embedding(position_ids)
+        position_embedding = self.position_embedding[:seq_len]
         position_embedding = tf.expand_dims(position_embedding, 0)
-        position_embedding = tf.tile(position_embedding, [batch_size, 1, 1])
+        position_embedding = tf.tile(position_embedding, [1, 1, 1])
 
         out = token_embedding + segment_embedding + position_embedding
         out = self.layer_normal(self.drop_out(out))
