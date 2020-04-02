@@ -1,7 +1,6 @@
 from bert_utils.model.attention import EncoderLayer
 from bert_utils.model.embedding import InputEmbedding
 from tensorflow.keras.layers import *
-
 import tensorflow as tf
 
 
@@ -29,6 +28,7 @@ class Bert(Layer):
                  config,
                  **kwargs):
         super(Bert, self).__init__(**kwargs)
+        self.dict_path = config.dict_path
         self.input_embedding = InputEmbedding(config,
                                               name='embeddings')
 

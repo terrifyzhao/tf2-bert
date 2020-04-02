@@ -25,3 +25,4 @@ class BertConfig(object):
         self.max_position_embeddings = max_position_embeddings
         self.type_vocab_size = type_vocab_size
         self.initializer_range = initializer_range
+        self.dict_path = None
