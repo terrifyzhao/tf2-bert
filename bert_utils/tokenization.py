@@ -171,7 +171,7 @@ class Tokenizer(object):
     def tokens_to_ids(self, tokens):
         """token序列转换为对应的id序列
         """
-        return [self.vocab[token] for token in tokens]
+        return [self.vocab.get(token, 100) for token in tokens]
 
 
 def is_string(s):

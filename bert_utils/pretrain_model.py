@@ -16,12 +16,13 @@ class PreTrainModel(object):
     def __init__(self,
                  checkpoint_path,
                  dict_path,
+                 is_pool=False,
                  first_length=None,
                  second_length=None):
         configs = BertConfig()
         self.first_length = first_length
         self.second_length = second_length
-        self.bert = Bert(configs, name='bert')
+        self.bert = Bert(configs, is_pool=is_pool, name='bert')
         self.dict_path = dict_path
 
         l_input_ids = Input(shape=(None,), dtype='int32')
@@ -32,17 +33,16 @@ class PreTrainModel(object):
         self._load_check_weights(self.model, checkpoint_path)
 
     def predict(self, first, second=None):
-        assert type(first) == list, "Expecting inputs type must be list"
+        # assert type(first) == list, "Expecting inputs type must be list"
         # 建立分词器
         tokenizer = Tokenizer(self.dict_path, do_lower_case=True)
-        # 编码测试
         token_ids = []
         segment_ids = []
-        if self.first_length is None and first:
-            self.first_length = max([len(x) for x in first])
-        if self.second_length is None and second:
-            self.second_length = max([len(x) for x in second])
-        if second:
+        if self.first_length is None and first is not None:
+            self.first_length = max([len(x) for x in first]) + 2
+        if self.second_length is None and second is not None:
+            self.second_length = max([len(x) for x in second]) + 1
+        if second is not None:
             for f, s in zip(first, second):
                 token_id, segment_id = tokenizer.encode(first_text=f,
                                                         second_text=s,
