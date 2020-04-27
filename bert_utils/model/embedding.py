@@ -43,11 +43,14 @@ class InputEmbedding(Layer):
         segment_embedding = self.segment_embedding(segment)
 
         # 位置编码
-        batch_size, seq_len = token_embedding.shape[0], token_embedding.shape[1]
+        import tensorflow.keras.backend as K
+        input_shape = K.shape(inputs)
+        batch_size, seq_len = input_shape[1], input_shape[2]
+        # [512, 768]
         position_embedding = self.position_embedding[:seq_len]
         position_embedding = tf.expand_dims(position_embedding, 0)
-        # position_embedding = tf.tile(position_embedding, [1, 1, 1])
-
+        position_embedding = tf.tile(position_embedding, [batch_size, 1, 1])
+        # print(K.shape(position_embedding))
         out = token_embedding + segment_embedding + position_embedding
         out = self.drop_out(self.layer_normal(out))
         return out

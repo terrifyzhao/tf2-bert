@@ -1,6 +1,7 @@
 from bert_utils.model.attention import EncoderLayer
 from bert_utils.model.embedding import InputEmbedding
 from tensorflow.keras.layers import *
+from tensorflow.keras.models import *
 import tensorflow as tf
 from bert_utils.utils import create_initializer
 
@@ -56,14 +57,14 @@ class Bert(Layer):
 
     def call(self, inputs, training=None, mask=None):
         if mask is None:
-            mask = self.compute_mask(inputs)
+            mask = self._compute_mask(inputs)
         out = self.input_embedding(inputs)
         out = self.encoder(out, mask=mask)
         if self.is_pool:
             out = self.pool(out)
         return out
 
-    def compute_mask(self, inputs, mask=None):
+    def _compute_mask(self, inputs, mask=None):
         if isinstance(inputs, list):
             assert 2 == len(inputs), "Expecting inputs to be a [input_ids, token_type_ids] list"
             input_ids, token_type_ids = inputs

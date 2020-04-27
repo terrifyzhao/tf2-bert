@@ -1,5 +1,0 @@
-person 0
-partnercontract 1
-enterprise 2
-building 3
-buildingproject 4

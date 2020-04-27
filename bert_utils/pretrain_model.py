@@ -1,27 +1,22 @@
 from bert_utils.model.transformer import Bert
 import tensorflow as tf
-from tensorflow.keras import Input, Model
-import numpy as np
-from bert_utils.tokenization import Tokenizer
+from tensorflow.keras import Model
+from tensorflow.keras.layers import *
 from bert_utils.config import BertConfig
 
 
-# configs = {}
 
-# if config_path:
-#     configs.update(json.load(open(config_path)))
+def load_model(checkpoint_path, dict_path, is_pool=False):
+    p = PreTrainModel(checkpoint_path, dict_path, is_pool=is_pool)
+    return p.model
 
 
 class PreTrainModel(object):
     def __init__(self,
                  checkpoint_path,
                  dict_path,
-                 is_pool=False,
-                 first_length=None,
-                 second_length=None):
+                 is_pool=False):
         configs = BertConfig()
-        self.first_length = first_length
-        self.second_length = second_length
         self.bert = Bert(configs, is_pool=is_pool, name='bert')
         self.dict_path = dict_path
 
@@ -30,34 +25,7 @@ class PreTrainModel(object):
 
         output = self.bert([l_input_ids, l_token_type_ids])
         self.model = Model(inputs=[l_input_ids, l_token_type_ids], outputs=output)
-        self._load_check_weights(self.model, checkpoint_path)
-
-    def predict(self, first, second=None):
-        # assert type(first) == list, "Expecting inputs type must be list"
-        # 建立分词器
-        tokenizer = Tokenizer(self.dict_path, do_lower_case=True)
-        token_ids = []
-        segment_ids = []
-        if self.first_length is None and first is not None:
-            self.first_length = max([len(x) for x in first]) + 2
-        if self.second_length is None and second is not None:
-            self.second_length = max([len(x) for x in second]) + 1
-        if second is not None:
-            for f, s in zip(first, second):
-                token_id, segment_id = tokenizer.encode(first_text=f,
-                                                        second_text=s,
-                                                        first_length=self.first_length,
-                                                        second_length=self.second_length)
-                token_ids.append(token_id)
-                segment_ids.append(segment_id)
-        else:
-            for f in first:
-                token_id, segment_id = tokenizer.encode(f,
-                                                        first_length=self.first_length,
-                                                        second_length=self.second_length)
-                token_ids.append(token_id)
-                segment_ids.append(segment_id)
-        return self.model([np.array(token_ids), np.array(segment_ids)])
+        self.load_check_weights(self.bert, checkpoint_path)
 
     def _map_name(self, name):
         # 如果包含embeddings:0说明是嵌入层，需要把最后的embeddings去除。其它的把结尾的0去除即可
@@ -66,7 +34,7 @@ class PreTrainModel(object):
         else:
             return name[:-2]
 
-    def _load_check_weights(self, bert, ckpt_path):
+    def load_check_weights(self, bert, ckpt_path):
         ckpt_reader = tf.train.load_checkpoint(ckpt_path)
 
         loaded_weights = set()
