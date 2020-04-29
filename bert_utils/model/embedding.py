@@ -21,21 +21,17 @@ class InputEmbedding(Layer):
                                            config.hidden_size,
                                            name='token_type_embeddings',
                                            embeddings_initializer=self.initializer)
-        # 位置向量
-        # self.position_embedding = Embedding(self.max_position,
-        #                                     self.hidden_size,
-        #                                     name='position_embeddings',
-        #                                     embeddings_initializer=create_initializer(config.initializer_range))
+
         # drop_out & layer_normal
         self.drop_out = Dropout(config.hidden_dropout_prob)
         self.layer_normal = LayerNormalization(name="LayerNorm")
 
     def build(self, input_shape):
-        super(InputEmbedding, self).build(input_shape)
         self.position_embedding = self.add_weight(name='position_embeddings/embeddings',
                                                   shape=(self.max_position,
                                                          self.hidden_size),
                                                   initializer=self.initializer)
+        super(InputEmbedding, self).build(input_shape)
 
     def call(self, inputs, training=None, mask=None):
         token, segment = inputs
@@ -43,14 +39,13 @@ class InputEmbedding(Layer):
         segment_embedding = self.segment_embedding(segment)
 
         # 位置编码
-        import tensorflow.keras.backend as K
-        input_shape = K.shape(inputs)
+        input_shape = tf.shape(inputs)
         batch_size, seq_len = input_shape[1], input_shape[2]
-        # [512, 768]
+        # [seq_len, hidden_size]
         position_embedding = self.position_embedding[:seq_len]
+        # [1, seq_len, hidden_size]
         position_embedding = tf.expand_dims(position_embedding, 0)
-        position_embedding = tf.tile(position_embedding, [batch_size, 1, 1])
-        # print(K.shape(position_embedding))
+
         out = token_embedding + segment_embedding + position_embedding
         out = self.drop_out(self.layer_normal(out))
         return out

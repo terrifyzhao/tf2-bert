@@ -10,39 +10,37 @@ class EncoderLayer(Layer):
                  config,
                  **kwargs):
         super(EncoderLayer, self).__init__(**kwargs)
-        self.self_attention = SelfAttention(config,
-                                            name='attention')
-        self.intermediate = Intermediate(config.intermediate_size,
-                                         config.initializer_range,
-                                         name='intermediate')
-        self.outputs = Output(config.hidden_size,
-                              config.initializer_range,
-                              config.hidden_dropout_prob,
-                              name='output')
 
-    def call(self, inputs, training=None, mask=None):
-        attention_out = self.self_attention([inputs, inputs, inputs], mask=mask)
-        out = self.intermediate(attention_out)
-        out = self.outputs([attention_out, out])
-        return out
-
-
-class SelfAttention(Layer):
-    def __init__(self,
-                 config,
-                 **kwargs):
-        super(SelfAttention, self).__init__(**kwargs)
         self.n_head = config.num_attention_heads
         self.hidden_size = config.hidden_size
         self.d_k = config.hidden_size // config.num_attention_heads
         self.dropout_rate = config.hidden_dropout_prob
-        self.attention = MultiHeadAttention(config, self.d_k, name='self')
-        self.attention_out = AttentionOutput(config, name='output')
+        self.attention = MultiHeadAttention(config, self.d_k, name='attention/self')
+        self.dense = Dense(config.hidden_size,
+                           kernel_initializer=create_initializer(config.initializer_range),
+                           name='attention/output/dense')
+        self.LayerNorm = LayerNormalization(name='output/LayerNorm')
+        self.dropout = Dropout(config.hidden_dropout_prob)
+
+        self.dense1 = Dense(config.intermediate_size, kernel_initializer=create_initializer(config.initializer_range),
+                            name='intermediate/dense', activation=gelu)
+        self.dense2 = Dense(config.hidden_size, kernel_initializer=create_initializer(config.initializer_range),
+                            name='output/dense')
+        self.drop_out = Dropout(config.hidden_dropout_prob)
+        self.layerNorm = LayerNormalization(name="output/LayerNorm")
 
     def call(self, inputs, training=None, mask=None):
-        out, attention_input = self.attention(inputs, mask=mask)
+        out = self.attention([inputs, inputs, inputs], mask=mask)
 
-        out = self.attention_out([out, attention_input])
+        out = self.dense(out)
+        out = self.dropout(out)
+        attention_out = self.LayerNorm(out + inputs)
+
+        out = self.dense1(attention_out)
+        out = self.dense2(out)
+        out = self.dropout(out)
+        out = self.LayerNorm(out + attention_out)
+
         return out
 
 
@@ -52,6 +50,7 @@ class MultiHeadAttention(Layer):
         self.d_k = d_k
         self.hidden_size = config.hidden_size
         self.num_attention_heads = config.num_attention_heads
+        self.drop_out = Dropout(config.attention_probs_dropout_prob)
         self.q_matrix = Dense(self.hidden_size,
                               kernel_initializer=create_initializer(config.initializer_range),
                               name='query')
@@ -68,71 +67,19 @@ class MultiHeadAttention(Layer):
         key = self.k_matrix(key)
         value = self.v_matrix(value)
 
+        # [batch_size, n_heads, seq_len, head_size]
         query = tf.reshape(query, [-1, self.num_attention_heads, tf.shape(query)[1], self.d_k])
         key = tf.reshape(key, [-1, self.num_attention_heads, tf.shape(key)[1], self.d_k])
         value = tf.reshape(value, [-1, self.num_attention_heads, tf.shape(value)[1], self.d_k])
-
+        # [batch_size, n_heads, seq_len, seq_len]
         out = tf.matmul(query, tf.transpose(key, [0, 1, 3, 2])) / (self.d_k ** 0.5)
-
         out = mask_op(out, mask, mode='add')
         out = tf.nn.softmax(out, axis=-1)
-
-        out = tf.matmul(out, value)
-        out = tf.transpose(out, [0, 1, 3, 2])
-        out = tf.reshape(out, [-1, tf.shape(out)[3], self.hidden_size])
-        out = mask_op(out, mask, mode='mul')
-        return out, inputs[0]
-
-
-class AttentionOutput(Layer):
-    def __init__(self, config, **kwargs):
-        super().__init__(**kwargs)
-        self.dense = Dense(config.hidden_size,
-                           kernel_initializer=create_initializer(config.initializer_range),
-                           name='dense')
-        self.LayerNorm = LayerNormalization(name='LayerNorm')
-        self.dropout = Dropout(config.hidden_dropout_prob)
-
-    def call(self, inputs, training=False):
-        attention_outputs, attention_inputs = inputs
-        out = self.dense(attention_outputs)
-        out = self.dropout(out)
-        out = self.LayerNorm(out + attention_inputs)
-        return out
-
-
-class Intermediate(Layer):
-    def __init__(self,
-                 intermediate_size,
-                 initializer_range,
-                 **kwargs):
-        super(Intermediate, self).__init__(**kwargs)
-        self.dense = Dense(intermediate_size, kernel_initializer=create_initializer(initializer_range), name='dense')
-        self.act = Activation(gelu)
-
-    def call(self, inputs, training=None, mask=None):
-        out = self.dense(inputs)
-        out = self.act(out)
-        return out
-
-
-class Output(Layer):
-    def __init__(self,
-                 hidden_size,
-                 initializer_range,
-                 hidden_dropout_prob,
-                 **kwargs):
-        super(Output, self).__init__(**kwargs)
-        self.dense = Dense(hidden_size, kernel_initializer=create_initializer(initializer_range), name='dense')
-        # self.act = Activation(gelu)
-        self.drop_out = Dropout(hidden_dropout_prob)
-        self.layerNorm = LayerNormalization(name="LayerNorm")
-
-    def call(self, inputs, training=None, mask=None):
-        attention_out, out = inputs
-        out = self.dense(out)
         out = self.drop_out(out)
-        out = self.layerNorm(attention_out + out)
+        #  [batch_size, n_heads, seq_len, head_size]
+        out = tf.matmul(out, value)
+        out = tf.reshape(out, [-1, tf.shape(out)[2], self.hidden_size])
+        # return out, inputs[0]
         return out
 
 
@@ -150,4 +97,3 @@ def gelu(x):
     cdf = 0.5 * (1.0 + tf.tanh(
         (np.sqrt(2 / np.pi) * (x + 0.044715 * tf.pow(x, 3)))))
     return x * cdf
-

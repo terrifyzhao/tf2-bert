@@ -13,15 +13,15 @@ class TransformerEncoder(Layer):
         super(TransformerEncoder, self).__init__(**kwargs)
         self.num_hidden_layers = config.num_hidden_layers
 
-        self.self_attention = []
+        self.encoders = []
         for i in range(self.num_hidden_layers):
-            self.self_attention.append(EncoderLayer(config,
-                                                    name=f'layer_{i}'))
+            self.encoders.append(EncoderLayer(config,
+                                              name=f'layer_{i}'))
 
     def call(self, inputs, training=None, mask=None):
         out = inputs
-        for attention in self.self_attention:
-            out = attention(out, mask=mask)
+        for encoder in self.encoders:
+            out = encoder(out, mask=mask)
         return out
 
 
@@ -52,7 +52,7 @@ class Bert(Layer):
         self.dict_path = config.dict_path
         self.is_pool = is_pool
         self.input_embedding = InputEmbedding(config, name='embeddings')
-        self.encoder = TransformerEncoder(config, name='encoder')  # 初始化权重时的标准差
+        self.encoder = TransformerEncoder(config, name='encoder')
         self.pool = Pooler(config, name='pooler')
 
     def call(self, inputs, training=None, mask=None):
@@ -64,7 +64,7 @@ class Bert(Layer):
             out = self.pool(out)
         return out
 
-    def _compute_mask(self, inputs, mask=None):
+    def _compute_mask(self, inputs):
         if isinstance(inputs, list):
             assert 2 == len(inputs), "Expecting inputs to be a [input_ids, token_type_ids] list"
             input_ids, token_type_ids = inputs

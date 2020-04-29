@@ -58,11 +58,11 @@ def data_generator(batch_size):
 
 
 output = Lambda(lambda x: x[:, 0, :])(model.output)
-output = Dense(100)(output)
+# output = Dense(100)(output)
 output = Dense(2, activation='softmax')(output)
 model = Model(inputs=model.input, outputs=output)
 print(model.summary())
-optimizer = tf.keras.optimizers.Adam(2e-5)
+optimizer = tf.keras.optimizers.Adam(1e-5)
 
 train_loss = tf.keras.metrics.Mean(name='train_loss')
 train_accuracy = tf.keras.metrics.SparseCategoricalAccuracy(name='train_accuracy')
@@ -90,7 +90,7 @@ for epoch in range(EPOCHS):
     train_loss.reset_states()
     train_accuracy.reset_states()
 
-    for x, y in data_generator(8):
+    for x, y in data_generator(10):
         train_cls_step(x, y)
 
         template = 'Epoch {}, Loss: {}, Accuracy: {}'
