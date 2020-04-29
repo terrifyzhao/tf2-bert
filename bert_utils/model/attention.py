@@ -10,8 +10,8 @@ class EncoderLayer(Layer):
                  config,
                  **kwargs):
         super(EncoderLayer, self).__init__(**kwargs)
-        self.attention = SelfAttention(config,
-                                       name='attention')
+        self.self_attention = SelfAttention(config,
+                                            name='attention')
         self.intermediate = Intermediate(config.intermediate_size,
                                          config.initializer_range,
                                          name='intermediate')
@@ -21,7 +21,7 @@ class EncoderLayer(Layer):
                               name='output')
 
     def call(self, inputs, training=None, mask=None):
-        attention_out = self.attention([inputs, inputs, inputs], mask=mask)
+        attention_out = self.self_attention([inputs, inputs, inputs], mask=mask)
         out = self.intermediate(attention_out)
         out = self.outputs([attention_out, out])
         return out
@@ -41,6 +41,7 @@ class SelfAttention(Layer):
 
     def call(self, inputs, training=None, mask=None):
         out, attention_input = self.attention(inputs, mask=mask)
+
         out = self.attention_out([out, attention_input])
         return out
 
@@ -128,9 +129,8 @@ class Output(Layer):
         self.layerNorm = LayerNormalization(name="LayerNorm")
 
     def call(self, inputs, training=None, mask=None):
-        attention_out, inputs = inputs
-        out = self.dense(inputs)
-        # out = self.act(out)
+        attention_out, out = inputs
+        out = self.dense(out)
         out = self.drop_out(out)
         out = self.layerNorm(attention_out + out)
         return out
@@ -150,3 +150,4 @@ def gelu(x):
     cdf = 0.5 * (1.0 + tf.tanh(
         (np.sqrt(2 / np.pi) * (x + 0.044715 * tf.pow(x, 3)))))
     return x * cdf
+

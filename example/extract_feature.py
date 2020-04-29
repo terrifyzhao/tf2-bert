@@ -14,17 +14,3 @@ token_id, segment_id = tokenizer.encode('我老婆是喻言')
 
 out = model([np.array([token_id]), np.array([segment_id])])
 print(out)
-
-# o1 = model.predict(first=['今天天气不错'])
-# o2 = model.predict(first=['这天气真好啊'])
-# import numpy as np
-#
-# # o1 = np.squeeze(np.mean(o1, axis=1))
-# # o2 = np.squeeze(np.mean(o2, axis=1))
-#
-# # o1 = np.squeeze(o1)[0]
-# # o2 = np.squeeze(o2)[0]
-#
-# sim = np.matmul(o1, np.transpose(o2)) / (np.linalg.norm(o1, axis=1) * np.linalg.norm(o2, axis=1))
-# # sim = np.matmul(o1, o2) / (np.linalg.norm(o1) * np.linalg.norm(o2))
-# print(sim)
