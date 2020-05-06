@@ -19,27 +19,27 @@ class EncoderLayer(Layer):
         self.dense = Dense(config.hidden_size,
                            kernel_initializer=create_initializer(config.initializer_range),
                            name='attention/output/dense')
-        self.LayerNorm = LayerNormalization(name='output/LayerNorm')
-        self.dropout = Dropout(config.hidden_dropout_prob)
+        self.dropout1 = Dropout(config.hidden_dropout_prob)
+        self.attention_layer_norm = LayerNormalization(name='attention/output/LayerNorm')
 
         self.dense1 = Dense(config.intermediate_size, kernel_initializer=create_initializer(config.initializer_range),
                             name='intermediate/dense', activation=gelu)
         self.dense2 = Dense(config.hidden_size, kernel_initializer=create_initializer(config.initializer_range),
                             name='output/dense')
-        self.drop_out = Dropout(config.hidden_dropout_prob)
-        self.layerNorm = LayerNormalization(name="output/LayerNorm")
+        self.dropout2 = Dropout(config.hidden_dropout_prob)
+        self.out_layer_norm = LayerNormalization(name="output/LayerNorm")
 
     def call(self, inputs, training=None, mask=None):
         out = self.attention([inputs, inputs, inputs], mask=mask)
 
         out = self.dense(out)
-        out = self.dropout(out)
-        attention_out = self.LayerNorm(out + inputs)
+        out = self.dropout1(out, training=training)
+        attention_out = self.attention_layer_norm(tf.add(out, inputs))
 
         out = self.dense1(attention_out)
         out = self.dense2(out)
-        out = self.dropout(out)
-        out = self.LayerNorm(out + attention_out)
+        out = self.dropout2(out, training=training)
+        out = self.out_layer_norm(tf.add(out, attention_out))
 
         return out
 
@@ -78,7 +78,8 @@ class MultiHeadAttention(Layer):
         out = self.drop_out(out)
         #  [batch_size, n_heads, seq_len, head_size]
         out = tf.matmul(out, value)
-        out = tf.reshape(out, [-1, tf.shape(out)[2], self.hidden_size])
+        out = tf.transpose(out, [0, 2, 1, 3])
+        out = tf.reshape(out, [-1, tf.shape(out)[1], self.hidden_size])
         # return out, inputs[0]
         return out
 

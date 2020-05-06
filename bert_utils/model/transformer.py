@@ -1,9 +1,9 @@
 from bert_utils.model.attention import EncoderLayer
 from bert_utils.model.embedding import InputEmbedding
 from tensorflow.keras.layers import *
-from tensorflow.keras.models import *
 import tensorflow as tf
 from bert_utils.utils import create_initializer
+import numpy as np
 
 
 class TransformerEncoder(Layer):
@@ -20,8 +20,11 @@ class TransformerEncoder(Layer):
 
     def call(self, inputs, training=None, mask=None):
         out = inputs
-        for encoder in self.encoders:
+        for i, encoder in enumerate(self.encoders):
             out = encoder(out, mask=mask)
+            # if i == 11:
+            # print('-' * 100, i)
+            # print(tf.reduce_mean(out[:, 0], axis=1))
         return out
 
 
@@ -30,7 +33,7 @@ class Pooler(Layer):
                  config,
                  **kwargs):
         super(Pooler, self).__init__(**kwargs)
-        self.dense = tf.keras.layers.Dense(
+        self.dense = Dense(
             config.hidden_size,
             kernel_initializer=create_initializer(config.initializer_range),
             activation="tanh",

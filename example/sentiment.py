@@ -18,6 +18,7 @@ train_data = pd.read_csv('../data/sentiment_data.csv')
 model = load_model(checkpoint_path, dict_path, is_pool=False)
 tokenizer = Tokenizer(dict_path, do_lower_case=True)
 
+train_data = train_data.sample(frac=1)
 text = train_data['text'].values
 
 
@@ -50,6 +51,8 @@ def data_generator(batch_size):
 
 
 out = Lambda(lambda x: x[:, 0, :])(model.output)
+print(out)
+print('-' * 100)
 output = Dense(1, activation='sigmoid')(out)
 model = Model(inputs=model.input, outputs=output)
 
@@ -63,6 +66,7 @@ train_accuracy = tf.keras.metrics.BinaryAccuracy(name='train_accuracy')
 def train_cls_step(inputs, labels):
     with tf.GradientTape() as tape:
         predictions = model(inputs)
+        # print(predictions)
 
         loss = tf.keras.losses.BinaryCrossentropy(from_logits=True)(labels, predictions)
 
@@ -74,6 +78,7 @@ def train_cls_step(inputs, labels):
     train_accuracy(labels, predictions)
 
 
+# tf.config.experimental_run_functions_eagerly(True)
 EPOCHS = 5
 
 for epoch in range(EPOCHS):
@@ -82,7 +87,7 @@ for epoch in range(EPOCHS):
     train_accuracy.reset_states()
 
     for x, y in data_generator(16):
-        train_cls_step(x, y)
+        train_cls_step([tf.constant(x[0]), tf.constant(x[1])], tf.constant(y))
 
         template = 'Epoch {}, Loss: {}, Accuracy: {}'
         print(template.format(epoch + 1,

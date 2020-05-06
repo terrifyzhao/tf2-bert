@@ -5,7 +5,6 @@ from tensorflow.keras.layers import *
 from bert_utils.config import BertConfig
 
 
-
 def load_model(checkpoint_path, dict_path, is_pool=False):
     p = PreTrainModel(checkpoint_path, dict_path, is_pool=is_pool)
     return p.model

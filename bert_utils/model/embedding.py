@@ -21,7 +21,6 @@ class InputEmbedding(Layer):
                                            config.hidden_size,
                                            name='token_type_embeddings',
                                            embeddings_initializer=self.initializer)
-
         # drop_out & layer_normal
         self.drop_out = Dropout(config.hidden_dropout_prob)
         self.layer_normal = LayerNormalization(name="LayerNorm")
