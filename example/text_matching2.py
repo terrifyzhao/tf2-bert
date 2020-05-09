@@ -58,6 +58,23 @@ def data_generator(batch_size):
                 token_ids, segment_ids, Y = [], [], []
 
 
+def data_generator2():
+    token_ids = []
+    segment_ids = []
+    Y = []
+    for f, s, l in zip(first[:3000], second[:3000], label[:3000]):
+        f = f[0:30]
+        s = s[0:30]
+        token_id, segment_id = tokenizer.encode(first_text=f,
+                                                second_text=s)
+        token_ids.append(token_id)
+        segment_ids.append(segment_id)
+        Y.append(l)
+    token_ids = seq_padding(token_ids)
+    segment_ids = seq_padding(segment_ids)
+    return [token_ids, segment_ids], np.array(Y)
+
+
 output = Dropout(rate=0.1)(model.output)
 output = Dense(2, activation='softmax')(output)
 model = Model(inputs=model.input, outputs=output)
@@ -72,4 +89,6 @@ model.compile(
 )
 model.summary()
 
-model.fit_generator(data_generator(10), 200, epochs=10)
+# model.fit_generator(data_generator(10), 200, epochs=10)
+x, y = data_generator2()
+model.fit(x, y, batch_size=16, epochs=10)

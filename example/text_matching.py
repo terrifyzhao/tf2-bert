@@ -79,15 +79,11 @@ class MyModel(Model):
         # print(np.mean(out, axis=1))
         # print(np.var(out, axis=1))
         out = self.dense(out)
-        print(out)
+        # print(out)
         out = self.act(out)
-        print(out)
+        # print(out)
         return out
 
-
-# output = Lambda(lambda x: x[:, 0, :])(model.output)
-# output = Dense(1, activation='sigmoid')(model.output[:, 0])
-# model = Model(inputs=model.input, outputs=output)
 model = MyModel(bert)
 # print(model.summary())
 optimizer = tf.keras.optimizers.Adam(1e-4)

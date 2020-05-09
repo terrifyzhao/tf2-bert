@@ -36,7 +36,7 @@ def data_generator(batch_size):
         token_ids = []
         segment_ids = []
         Y = []
-        for t in text:
+        for t in text[0:3000]:
             t = t[0:30]
             token_id, segment_id = tokenizer.encode(first_text=t)
             token_ids.append(token_id)
@@ -50,10 +50,7 @@ def data_generator(batch_size):
                 token_ids, segment_ids, Y = [], [], []
 
 
-out = Lambda(lambda x: x[:, 0, :])(model.output)
-print(out)
-print('-' * 100)
-output = Dense(1, activation='sigmoid')(out)
+output = Dense(1, activation='sigmoid')(model.output[:, 0, :])
 model = Model(inputs=model.input, outputs=output)
 
 optimizer = tf.keras.optimizers.Adam(1e-5)
@@ -78,6 +75,7 @@ def train_cls_step(inputs, labels):
     train_accuracy(labels, predictions)
 
 
+# tf.keras.backend.set_learning_phase(True)
 # tf.config.experimental_run_functions_eagerly(True)
 EPOCHS = 5
 
