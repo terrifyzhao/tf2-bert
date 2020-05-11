@@ -24,10 +24,10 @@ class InputEmbedding(Layer):
                                          embeddings_initializer=self.initializer)
         # 段落向量
         if use_token_type:
-            self.segment_embedding = Embedding(2,
-                                               config.hidden_size,
-                                               name='token_type_embeddings',
-                                               embeddings_initializer=self.initializer)
+            self.token_type_embedding = Embedding(2,
+                                                  config.hidden_size,
+                                                  name='token_type_embeddings',
+                                                  embeddings_initializer=self.initializer)
 
         # 位置编码
         if self.use_position_embedding:
@@ -50,7 +50,7 @@ class InputEmbedding(Layer):
 
         out_embedding = self.token_embedding(input_ids)
         if token_type_ids is not None:
-            out_embedding += self.segment_embedding(token_type_ids)
+            out_embedding += self.token_type_embedding(token_type_ids)
 
         # 位置编码
         if self.position_embedding is not None:

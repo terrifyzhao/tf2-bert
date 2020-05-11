@@ -3,7 +3,6 @@ import tensorflow as tf
 from tensorflow.keras import Model
 from tensorflow.keras.layers import *
 from bert_utils.config import BertConfig
-from functools import partial
 
 
 def load_model(checkpoint_path, dict_path, is_pool=False):
@@ -20,13 +19,12 @@ class PreTrainModel(object):
         self.bert = Bert(configs, is_pool=is_pool, name='bert')
         self.dict_path = dict_path
 
-        l_input_ids = Input(shape=(None,), dtype='int32')
-        l_token_type_ids = Input(shape=(None,), dtype='int32')
+        input_ids = Input(shape=(None,), dtype='int32')
+        token_type_ids = Input(shape=(None,), dtype='int32')
 
-        output = self.bert([l_input_ids, l_token_type_ids])
-        self.model = Model(inputs=[l_input_ids, l_token_type_ids], outputs=output)
-        # self.model = self.bert
-        self.load_check_weights(self.bert, checkpoint_path)
+        output = self.bert([input_ids, token_type_ids])
+        self.model = Model(inputs=[input_ids, token_type_ids], outputs=output)
+        self._load_check_weights(self.bert, checkpoint_path)
 
     def _map_name(self, name):
         # 如果包含embeddings:0说明是嵌入层，需要把最后的embeddings去除。其它的把结尾的0去除即可
@@ -37,7 +35,7 @@ class PreTrainModel(object):
         else:
             return name[:-2]
 
-    def load_check_weights(self, bert, ckpt_path):
+    def _load_check_weights(self, bert, ckpt_path):
         ckpt_reader = tf.train.load_checkpoint(ckpt_path)
 
         loaded_weights = set()
@@ -49,8 +47,6 @@ class PreTrainModel(object):
         param_values = tf.keras.backend.batch_get_value(bert.weights)
         for ndx, (param_value, param) in enumerate(zip(param_values, bert_params)):
             stock_name = self._map_name(param.name)
-            # print(stock_name)
-            # print(param.name)
             if ckpt_reader.has_tensor(stock_name):
                 ckpt_value = ckpt_reader.get_tensor(stock_name)
 
