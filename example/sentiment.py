@@ -2,52 +2,45 @@ from bert_utils.pretrain_model import load_model
 from tensorflow.keras import Model
 from tensorflow.keras.layers import *
 import pandas as pd
-from tensorflow import keras
 from bert_utils.tokenization import Tokenizer
-from bert_utils.config import BertConfig
-from bert_utils.model.transformer import Bert
 import tensorflow as tf
 import numpy as np
+from bert_utils.utils import pad_sequences
 
 config_path = '../chinese_L-12_H-768_A-12/bert_config.json'
 checkpoint_path = '../chinese_L-12_H-768_A-12/bert_model.ckpt'
 dict_path = '../chinese_L-12_H-768_A-12/vocab.txt'
 
-train_data = pd.read_csv('../data/sentiment_data.csv')
+max_len = 30
+batch_size = 64
+EPOCHS = 5
+
+tf.config.experimental_run_functions_eagerly(True)
+
+train_df = pd.read_csv('../data/sentiment_data.csv')
+train_df = train_df.sample(frac=1)
 
 model = load_model(checkpoint_path, dict_path, is_pool=False)
 tokenizer = Tokenizer(dict_path, do_lower_case=True)
 
-train_data = train_data.sample(frac=1)
-text = train_data['text'].values
 
-
-def seq_padding(X, padding=0):
-    L = [len(x) for x in X]
-    ML = max(L)
-    return np.array([
-        np.concatenate([x, [padding] * (ML - len(x))]) if len(x) < ML else x for x in X
-    ])
-
-
-def data_generator(batch_size):
-    i = 0
+def data_generator(bs):
     while True:
         token_ids = []
-        segment_ids = []
-        Y = []
-        for t in text[0:3000]:
-            t = t[0:30]
-            token_id, segment_id = tokenizer.encode(first_text=t)
+        token_type_ids = []
+        labels = []
+        for data in train_df.values:
+            text = data[1][0:max_len]
+            token_id, token_type_id = tokenizer.encode(text)
             token_ids.append(token_id)
-            segment_ids.append(segment_id)
-            Y.append([train_data['label'].values[i]])
-            i += 1
-            if len(token_ids) == batch_size or i == len(train_data) - 1:
-                token_ids = seq_padding(token_ids)
-                segment_ids = seq_padding(segment_ids)
-                yield [token_ids, segment_ids], np.array(Y)
-                token_ids, segment_ids, Y = [], [], []
+            token_type_ids.append(token_type_id)
+            labels.append(data[0])
+
+            if len(token_ids) == bs or data == train_df.values[-1]:
+                token_ids = pad_sequences(token_ids)
+                token_type_ids = pad_sequences(token_type_ids)
+                yield [token_ids, token_type_ids], np.array(labels)
+                token_ids, token_type_ids, labels = [], [], []
 
 
 output = Dense(1, activation='sigmoid')(model.output[:, 0, :])
@@ -63,7 +56,6 @@ train_accuracy = tf.keras.metrics.BinaryAccuracy(name='train_accuracy')
 def train_cls_step(inputs, labels):
     with tf.GradientTape() as tape:
         predictions = model(inputs)
-        # print(predictions)
 
         loss = tf.keras.losses.BinaryCrossentropy(from_logits=True)(labels, predictions)
 
@@ -75,17 +67,12 @@ def train_cls_step(inputs, labels):
     train_accuracy(labels, predictions)
 
 
-# tf.keras.backend.set_learning_phase(True)
-tf.config.experimental_run_functions_eagerly(True)
-EPOCHS = 5
-
 for epoch in range(EPOCHS):
-    # 在下一个epoch开始时，重置评估指标
     train_loss.reset_states()
     train_accuracy.reset_states()
 
-    for x, y in data_generator(16):
-        train_cls_step([tf.constant(x[0]), tf.constant(x[1])], tf.constant(y))
+    for x, y in data_generator(batch_size):
+        train_cls_step(x, y)
 
         template = 'Epoch {}, Loss: {}, Accuracy: {}'
         print(template.format(epoch + 1,

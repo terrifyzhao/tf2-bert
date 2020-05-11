@@ -18,7 +18,7 @@ config_path = '../chinese_L-12_H-768_A-12/bert_config.json'
 checkpoint_path = '../chinese_L-12_H-768_A-12/bert_model.ckpt'
 dict_path = '../chinese_L-12_H-768_A-12/vocab.txt'
 
-train_data = pd.read_csv('../data/matching_data.csv')
+train_data = pd.read_csv('../data/matching_train_data.csv')
 
 bert = load_model(checkpoint_path, dict_path, is_pool=False)
 tokenizer = Tokenizer(dict_path, do_lower_case=True)
@@ -27,12 +27,6 @@ train_data = train_data.sample(frac=1)
 first = train_data['sentence1'].values
 second = train_data['sentence2'].values
 label = train_data['label'].values
-
-
-# print(np.percentile([len(t) for t in first], 90))
-# # print(np.percentile([len(t) for t in second], 90))
-# #
-# # print('*' * 100)
 
 
 def seq_padding(X, padding=0):
@@ -74,18 +68,13 @@ class MyModel(Model):
 
     def call(self, inputs, training=None, mask=None):
         out = self.bert(inputs)[:, 0]
-
-        # print(np.mean(out, axis=1))
-        # print(np.var(out, axis=1))
         out = self.dense(out)
-        # print(out)
         out = self.act(out)
-        # print(out)
         return out
 
+
 model = MyModel(bert)
-# print(model.summary())
-optimizer = tf.keras.optimizers.Adam(2e-5)
+optimizer = tf.keras.optimizers.Adam(1e-5)
 
 train_loss = tf.keras.metrics.Mean(name='train_loss')
 train_accuracy = tf.keras.metrics.BinaryAccuracy(name='train_accuracy')
@@ -95,7 +84,6 @@ train_accuracy = tf.keras.metrics.BinaryAccuracy(name='train_accuracy')
 def train_cls_step(inputs, labels):
     with tf.GradientTape() as tape:
         predictions = model(inputs)
-        # print(predictions)
 
         loss = tf.keras.losses.BinaryCrossentropy(from_logits=True)(labels, predictions)
 
@@ -110,13 +98,11 @@ def train_cls_step(inputs, labels):
 EPOCHS = 5
 
 for epoch in range(EPOCHS):
-    # 在下一个epoch开始时，重置评估指标
     train_loss.reset_states()
     train_accuracy.reset_states()
 
-    for x, y in data_generator(32):
+    for x, y in data_generator(64):
         train_cls_step(x, y)
-        # train_cls_step([tf.constant(x[0]), tf.constant(x[1])], tf.constant(y))
 
         template = 'Epoch {}, Loss: {}, Accuracy: {}'
         print(template.format(epoch + 1,
