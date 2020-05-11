@@ -74,7 +74,6 @@ class MyModel(Model):
 
     def call(self, inputs, training=None, mask=None):
         out = self.bert(inputs)[:, 0]
-        print('*'*100)
 
         # print(np.mean(out, axis=1))
         # print(np.var(out, axis=1))
@@ -86,13 +85,13 @@ class MyModel(Model):
 
 model = MyModel(bert)
 # print(model.summary())
-optimizer = tf.keras.optimizers.Adam(1e-4)
+optimizer = tf.keras.optimizers.Adam(2e-5)
 
 train_loss = tf.keras.metrics.Mean(name='train_loss')
 train_accuracy = tf.keras.metrics.BinaryAccuracy(name='train_accuracy')
 
 
-# @tf.function
+@tf.function
 def train_cls_step(inputs, labels):
     with tf.GradientTape() as tape:
         predictions = model(inputs)

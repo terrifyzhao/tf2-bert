@@ -28,16 +28,11 @@ class PreTrainModel(object):
         # self.model = self.bert
         self.load_check_weights(self.bert, checkpoint_path)
 
-    # def load(self, model, checkpoint_path):
-    #     loader = partial(tf.train.load_variable, checkpoint_path)
-    #     a = self.bert.input_embedding.token_embedding
-    #     a.set_weights([loader('bert/embeddings/word_embeddings')])
-    #     b = self.bert.input_embedding.segment_embedding
-    #     c = self.bert.input_embedding.position_embedding
-
     def _map_name(self, name):
         # 如果包含embeddings:0说明是嵌入层，需要把最后的embeddings去除。其它的把结尾的0去除即可
         if 'embeddings:0' in name:
+            if 'position_embeddings:0' in name:
+                return name[:-(len('position_embeddings:0') + 1)]
             return name[:-(len('embeddings:0') + 1)]  # +1是因为有一个斜杠
         else:
             return name[:-2]

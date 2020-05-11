@@ -83,7 +83,8 @@ class BertEmbeddingsLayer(tf.keras.layers.Layer):
             embedding_output += self.token_type_embeddings_layer(token_type_ids)
 
         if self.position_embeddings_layer is not None:
-            seq_len = input_ids.shape.as_list()[1]
+            # seq_len = input_ids.shape.as_list()[1]
+            seq_len = tf.shape(input_ids)[1]
             emb_size = self.hidden_size
             # [seq_len, 128]
             pos_embeddings = self.position_embeddings_layer(seq_len)
@@ -127,7 +128,7 @@ class PositionalEncoding(tf.keras.layers.Layer):
         self.embedding_matrix = None
 
     def build(self, input_shape):
-        self.embedding_matrix = self.add_variable(
+        self.embedding_matrix = self.add_weight(
             shape=[self.max_position_embeddings, self.embedding_size],
             initializer=create_initializer(self.initializer_range),
             name=self.position_embedding_name,

@@ -74,10 +74,10 @@ class TransformerEncoderLayer(Layer):
         self.output_layer_norms = []
 
         for layer_idx in range(num_layers):
-            # attention_head = MultiHeadAttention(
-            #     config, 64, name='layer_{}/attention/self'.format(layer_idx))
-            attention_head = AttentionLayer(
-                 name='layer_{}/attention/self'.format(layer_idx))
+            attention_head = MultiHeadAttention(
+                config, 64, name='layer_{}/attention/self'.format(layer_idx))
+            # attention_head = AttentionLayer(
+            #      name='layer_{}/attention/self'.format(layer_idx))
             self.attention_heads.append(attention_head)
 
             attention_output = tf.keras.layers.Dense(
@@ -130,7 +130,10 @@ class TransformerEncoderLayer(Layer):
             layer_input = prev_output
 
             attention_heads = []
-            attention_head = self.attention_heads[layer_idx](layer_input,
+            # attention_head = self.attention_heads[layer_idx](layer_input,
+            #                                                  mask=mask,
+            #                                                  training=training)
+            attention_head = self.attention_heads[layer_idx]([layer_input,layer_input,layer_input],
                                                              mask=mask,
                                                              training=training)
             attention_heads.append(attention_head)
@@ -190,6 +193,7 @@ class Bert(Layer):
         super(Bert, self).__init__(**kwargs)
         self.dict_path = config.dict_path
         self.is_pool = is_pool
+        # self.input_embedding = BertEmbeddingsLayer(config, name='embeddings')
         self.input_embedding = InputEmbedding(config, name='embeddings')
         # self.encoder = TransformerEncoder(config, name='encoder')
         self.encoder = TransformerEncoderLayer(config, name='encoder')

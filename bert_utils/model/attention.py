@@ -20,26 +20,26 @@ class EncoderLayer(Layer):
         self.dense = Dense(config.hidden_size,
                            kernel_initializer=create_initializer(config.initializer_range),
                            name='attention/output/dense')
-        self.dropout1 = Dropout(config.hidden_dropout_prob)
+        self.dropout = Dropout(config.hidden_dropout_prob)
         self.attention_layer_norm = LayerNormalization(name='attention/output/LayerNorm')
 
         self.dense1 = Dense(config.intermediate_size, kernel_initializer=create_initializer(config.initializer_range),
                             name='intermediate/dense', activation=gelu)
         self.dense2 = Dense(config.hidden_size, kernel_initializer=create_initializer(config.initializer_range),
                             name='output/dense')
-        self.dropout2 = Dropout(config.hidden_dropout_prob)
+
         self.out_layer_norm = LayerNormalization(name="output/LayerNorm")
 
     def call(self, inputs, training=False, mask=None):
         out = self.attention([inputs, inputs, inputs], mask=mask)
 
         out = self.dense(out)
-        out = self.dropout1(out, training=training)
+        out = self.dropout(out, training=training)
         attention_out = self.attention_layer_norm(out + inputs, training=training)
 
         out = self.dense1(attention_out)
         out = self.dense2(out)
-        out = self.dropout2(out, training=training)
+        out = self.dropout(out, training=training)
         out = self.out_layer_norm(out + attention_out, training=training)
         # print(tf.reduce_mean(out[:, 1], axis=-1))
         return out
@@ -68,15 +68,20 @@ class MultiHeadAttention(Layer):
         key = self.k_matrix(key)
         value = self.v_matrix(value)
 
-        # [batch_size, n_heads, seq_len, head_size]
-        query = tf.reshape(query, [-1, self.num_attention_heads, tf.shape(query)[1], self.d_k])
-        key = tf.reshape(key, [-1, self.num_attention_heads, tf.shape(key)[1], self.d_k])
-        value = tf.reshape(value, [-1, self.num_attention_heads, tf.shape(value)[1], self.d_k])
+        # [batch_size, seq_len, n_heads, head_size]
+        query = tf.reshape(query, [-1, tf.shape(query)[1], self.num_attention_heads, self.d_k])
+        key = tf.reshape(key, [-1, tf.shape(key)[1], self.num_attention_heads, self.d_k])
+        value = tf.reshape(value, [-1, tf.shape(value)[1], self.num_attention_heads, self.d_k])
+
+        query = tf.transpose(query, [0, 2, 1, 3])
+        key = tf.transpose(key, [0, 2, 1, 3])
+        value = tf.transpose(value, [0, 2, 1, 3])
         # [batch_size, n_heads, seq_len, seq_len]
-        out = tf.matmul(query, tf.transpose(key, [0, 1, 3, 2])) / (self.d_k ** 0.5)
-        # out = mask_op(out, mask, mode='add')
+        # out = tf.matmul(query, tf.transpose(key, [0, 1, 3, 2])) / (self.d_k ** 0.5)
+        out = tf.matmul(query, key, transpose_b=True) / (self.d_k ** 0.5)
+        out = mask_op(out, mask, mode='add')
         out = tf.nn.softmax(out, axis=-1)
-        # out = self.drop_out(out)
+        out = self.drop_out(out)
         #  [batch_size, n_heads, seq_len, head_size]
         out = tf.matmul(out, value)
         out = tf.transpose(out, [0, 2, 1, 3])
@@ -231,7 +236,6 @@ class AttentionLayer(tf.keras.layers.Layer):
         return mask  # [B, F]
 
 
-
 def get_shape_list(tensor, expected_rank=None):
     """Returns a list of the shape of tensor, preferring static dimensions.
     Args:
@@ -264,6 +268,7 @@ def get_shape_list(tensor, expected_rank=None):
     for index in non_static_indexes:
         shape[index] = dyn_shape[index]
     return shape
+
 
 def gelu(x):
     """Gaussian Error Linear Unit.

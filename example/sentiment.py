@@ -76,7 +76,7 @@ def train_cls_step(inputs, labels):
 
 
 # tf.keras.backend.set_learning_phase(True)
-# tf.config.experimental_run_functions_eagerly(True)
+tf.config.experimental_run_functions_eagerly(True)
 EPOCHS = 5
 
 for epoch in range(EPOCHS):
