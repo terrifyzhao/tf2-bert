@@ -174,14 +174,14 @@ class Train(object):
                                       self.train_loss.result(),
                                       self.train_accuracy.result() * 100))
 
-                if step % 20 == 0:
-                    # test
-                    if test_data is not None:
-                        for s in range(test_data.steps):
-                            x, y = next(test_iter)
-                            eval_step(x, y)
-                        print(
-                            f'Test Loss: {self.test_loss.result()}, Test Accuracy: {self.test_accuracy.result() * 100}')
+            # if step != 0 and (step + 1) % 20 == 0:
+                # test
+            if test_data is not None:
+                for s in range(test_data.steps):
+                    x, y = next(test_iter)
+                    eval_step(x, y)
+                print(
+                    f'Test Loss: {self.test_loss.result()}, Test Accuracy: {self.test_accuracy.result() * 100}')
 
             print()
 

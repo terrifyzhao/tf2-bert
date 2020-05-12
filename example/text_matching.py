@@ -1,3 +1,11 @@
+import sys
+import os
+
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+
+rootPath = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(rootPath)
+
 from bert_utils.pretrain_model import load_model
 from tensorflow.keras import Model
 from tensorflow.keras.layers import *
@@ -10,12 +18,12 @@ config_path = '../chinese_L-12_H-768_A-12/bert_config.json'
 checkpoint_path = '../chinese_L-12_H-768_A-12/bert_model.ckpt'
 dict_path = '../chinese_L-12_H-768_A-12/vocab.txt'
 
-train_df = pd.read_csv('../data/matching_train_data.csv')[0:2000]
-test_df = pd.read_csv('../data/matching_test_data.csv')[0:100]
+train_df = pd.read_csv('../data/LCQMC/LCQMC_train.csv')
+test_df = pd.read_csv('../data/LCQMC/LCQMC_dev.csv')
 train_df = train_df.sample(frac=1)
 
-max_len = 30
-batch_size = 8
+max_len = 20
+batch_size = 64
 EPOCHS = 5
 
 model = load_model(checkpoint_path, dict_path, is_pool=False)
