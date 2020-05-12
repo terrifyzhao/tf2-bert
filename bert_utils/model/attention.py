@@ -46,12 +46,9 @@ class MultiHeadAttention(Layer):
         out = tf.matmul(query, key, transpose_b=True) / (self.d_k ** 0.5)
 
         if attention_mask is not None:
-            # [B, F, T] -> [B, 1, F, T]
             attention_mask = tf.expand_dims(attention_mask, axis=1)
-
-            # attention_mask is 1 for position and 0 for mask, but we want 0 for mask and -10000 for mask.
             # {1: position, 0: mask} -> {0: position, -10000: mask}
-            adder = (1.0 - tf.cast(attention_mask, dtype=tf.float32)) * -10000.0
+            adder = (1.0 - tf.cast(attention_mask, dtype=tf.float32)) * -1e8
             out += adder
 
         out = tf.nn.softmax(out, axis=-1)

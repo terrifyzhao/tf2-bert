@@ -108,14 +108,12 @@ class Train(object):
 
     def __init__(self,
                  epochs,
-                 steps,
                  lr=1e-5,
                  optimizer=None,
                  is_binary=True,
                  debug=True):
         self.is_binary = is_binary
         self.epochs = epochs
-        self.steps = steps
         self.lowest = 1e10
         if optimizer is None:
             self.optimizer = tf.keras.optimizers.Adam(lr)
@@ -128,25 +126,22 @@ class Train(object):
         if is_binary:
             self.loss = tf.keras.losses.BinaryCrossentropy(from_logits=True)
             self.train_accuracy = tf.keras.metrics.BinaryAccuracy(name='train_accuracy')
-            self.eval_accuracy = tf.keras.metrics.BinaryAccuracy(name='eval_accuracy')
+            self.test_accuracy = tf.keras.metrics.BinaryAccuracy(name='test_accuracy')
         else:
             self.loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
             self.train_accuracy = tf.keras.metrics.SparseCategoricalAccuracy(name='train_accuracy')
-            self.eval_accuracy = tf.keras.metrics.SparseCategoricalAccuracy(name='eval_accuracy')
+            self.test_accuracy = tf.keras.metrics.SparseCategoricalAccuracy(name='test_accuracy')
         self.train_loss = tf.keras.metrics.Mean(name='train_loss')
-        self.eval_loss = tf.keras.metrics.Mean(name='eval_loss')
+        self.test_loss = tf.keras.metrics.Mean(name='test_loss')
 
-    def train(self, model, train_data, eval_data=None):
+    def train(self, model, train_data, test_data=None, model_name='model'):
 
         @tf.function
         def train_step(inputs, labels):
             with tf.GradientTape() as tape:
                 predictions = model(inputs)
-
                 loss = self.loss(labels, predictions)
-
             gradients = tape.gradient(loss, model.trainable_variables)
-
             self.optimizer.apply_gradients(zip(gradients, model.trainable_variables))
 
             self.train_loss(loss)
@@ -155,36 +150,41 @@ class Train(object):
         @tf.function
         def eval_step(inputs, labels):
             predictions = model(inputs)
-            loss = self.loss(labels, predictions)
-            self.eval_loss(loss)
-            self.eval_accuracy(labels, predictions)
+            t_loss = self.loss(labels, predictions)
+            self.test_loss(t_loss)
+            self.test_accuracy(labels, predictions)
 
+        train_iter = train_data.__iter__()
+        test_iter = test_data.__iter__()
         for epoch in range(self.epochs):
             self.train_loss.reset_states()
             self.train_accuracy.reset_states()
-            self.eval_loss.reset_states()
-            self.eval_accuracy.reset_states()
+            self.test_loss.reset_states()
+            self.test_accuracy.reset_states()
+
             template = 'Epoch {}, Step {}/{}, Loss: {}, Accuracy: {}'
             # train
-            for x, y in train_data:
-                for step in range(self.steps):
-                    train_step(x, y)
-                    print(template.format(epoch + 1,
-                                          step + 1,
-                                          self.steps,
-                                          self.train_loss.result(),
-                                          self.train_accuracy.result() * 100))
+            for step in range(train_data.steps):
+                x, y = next(train_iter)
 
-            # eval
-            if eval_data is not None:
-                for x, y in eval_data:
-                    for step in range(self.steps):
-                        eval_step(x, y)
-                        print(template.format(epoch + 1,
-                                              step + 1,
-                                              self.eval_loss.result(),
-                                              self.eval_accuracy.result() * 100))
+                train_step(x, y)
+                print(template.format(epoch + 1,
+                                      step + 1,
+                                      train_data.steps,
+                                      self.train_loss.result(),
+                                      self.train_accuracy.result() * 100))
+
+                if step % 20 == 0:
+                    # test
+                    if test_data is not None:
+                        for s in range(test_data.steps):
+                            x, y = next(test_iter)
+                            eval_step(x, y)
+                        print(
+                            f'Test Loss: {self.test_loss.result()}, Test Accuracy: {self.test_accuracy.result() * 100}')
+
+            print()
 
             # save model
             if self.lowest > self.train_loss.result():
-                model.save_weight('text_matching_model {:.5f}', self.train_loss.result())
+                model.save_weights(model_name)

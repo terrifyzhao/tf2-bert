@@ -12,7 +12,7 @@ checkpoint_path = '../chinese_L-12_H-768_A-12/bert_model.ckpt'
 dict_path = '../chinese_L-12_H-768_A-12/vocab.txt'
 
 max_len = 30
-batch_size = 64
+batch_size = 8
 EPOCHS = 5
 
 tf.config.experimental_run_functions_eagerly(True)
@@ -45,36 +45,12 @@ def data_generator(bs):
 
 output = Dense(1, activation='sigmoid')(model.output[:, 0, :])
 model = Model(inputs=model.input, outputs=output)
+model.summary()
 
-optimizer = tf.keras.optimizers.Adam(1e-5)
-
-train_loss = tf.keras.metrics.Mean(name='train_loss')
-train_accuracy = tf.keras.metrics.BinaryAccuracy(name='train_accuracy')
-
-
-@tf.function
-def train_cls_step(inputs, labels):
-    with tf.GradientTape() as tape:
-        predictions = model(inputs)
-
-        loss = tf.keras.losses.BinaryCrossentropy(from_logits=True)(labels, predictions)
-
-    gradients = tape.gradient(loss, model.trainable_variables)
-
-    optimizer.apply_gradients(zip(gradients, model.trainable_variables))
-
-    train_loss(loss)
-    train_accuracy(labels, predictions)
-
-
-for epoch in range(EPOCHS):
-    train_loss.reset_states()
-    train_accuracy.reset_states()
-
-    for x, y in data_generator(batch_size):
-        train_cls_step(x, y)
-
-        template = 'Epoch {}, Loss: {}, Accuracy: {}'
-        print(template.format(epoch + 1,
-                              train_loss.result(),
-                              train_accuracy.result() * 100))
+model.compile(
+    loss='sparse_categorical_crossentropy',
+    optimizer=tf.keras.optimizers.Adam(1e-5),
+    metrics=['accuracy']
+)
+x, y = data_generator(batch_size)
+model.fit(x, y, batch_size=batch_size, epochs=EPOCHS)
