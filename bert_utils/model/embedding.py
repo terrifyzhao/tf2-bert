@@ -22,6 +22,7 @@ class InputEmbedding(Layer):
                                          name='word_embeddings',
                                          mask_zero=True,
                                          embeddings_initializer=self.initializer)
+
         # 段落向量
         if use_token_type:
             self.token_type_embedding = Embedding(2,

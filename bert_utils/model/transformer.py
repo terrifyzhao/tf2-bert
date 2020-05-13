@@ -99,50 +99,6 @@ class Pooler(Layer):
         return out
 
 
-class NSP(Layer):
-
-    def __init__(self, config, **kwargs):
-        super().__init__(**kwargs)
-        self.config = config
-
-    def build(self, input_shape):
-        self.output_weights = self.add_weight("output_weights",
-                                              shape=[2, self.config.hidden_size],
-                                              initializer=create_initializer(self.config.initializer_range))
-        self.output_bias = self.add_weight('output_bias',
-                                           shape=[2],
-                                           initializer=tf.zeros_initializer())
-
-    def call(self, inputs, **kwargs):
-        out = tf.matmul(inputs, self.output_weights, transpose_b=True)
-        out = tf.nn.bias_add(out, self.output_bias)
-        return out
-
-
-class MLM(Layer):
-
-    def __init__(self, config, embedding_weights, **kwargs):
-        super().__init__(**kwargs)
-        self.config = config
-        self.embedding_weights = embedding_weights
-        self.dense = Dense(config.hidden_size,
-                           activation=config.hidden_act,
-                           kernel_initializer=create_initializer(config.initializer_range))
-        self.layer_norm = LayerNormalization()
-
-    def build(self, input_shape):
-        self.output_bias = self.add_weights("output_bias",
-                                            shape=[self.config.vocab_size],
-                                            initializer=tf.zeros_initializer())
-
-    def call(self, inputs, **kwargs):
-        out = self.dense(inputs)
-        out = self.layer_norm(out)
-        out = tf.matmul(out, self.embedding_weights, transpose_b=True)
-        out += self.output_bias
-        return out
-
-
 class Bert(Layer):
     def __init__(self,
                  config,
@@ -154,16 +110,25 @@ class Bert(Layer):
         self.input_embedding = InputEmbedding(config, name='embeddings')
         self.encoder = TransformerEncoder(config, name='encoder')
         self.pool = Pooler(config, name='pooler')
-        self.nsp = NSP(config, name='cls/seq_relationship')
 
     def call(self, inputs, training=None, mask=None):
         if mask is None:
             mask = self._compute_mask(inputs)
         out = self.input_embedding(inputs)
-        out = self.encoder(out, mask=mask)
+        encoder_out = self.encoder(out, mask=mask)
         if self.is_pool:
-            out = self.pool(out)
-        return out
+            pool_out = self.pool(out)
+            outs = [pool_out]
+        else:
+            outs = [encoder_out]
+        if self.is_mlm:
+            mlm_out = self.mlm([encoder_out, self.input_embedding.token_embedding.weights])
+            outs.append(mlm_out)
+
+        if len(outs) == 1:
+            return outs[0]
+        else:
+            return outs[1:]
 
     def _compute_mask(self, inputs):
         if isinstance(inputs, list):
