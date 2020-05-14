@@ -103,39 +103,51 @@ class Bert(Layer):
     def __init__(self,
                  config,
                  is_pool=False,
+                 seq2seq=False,
                  **kwargs):
         super(Bert, self).__init__(**kwargs)
         self.dict_path = config.dict_path
         self.is_pool = is_pool
+        self.seq2seq = seq2seq
+        self.config = config
         self.input_embedding = InputEmbedding(config, name='embeddings')
         self.encoder = TransformerEncoder(config, name='encoder')
         self.pool = Pooler(config, name='pooler')
 
     def call(self, inputs, training=None, mask=None):
         if mask is None:
-            mask = self._compute_mask(inputs)
+            mask = self._compute_mask(inputs, self.seq2seq)
         out = self.input_embedding(inputs)
-        encoder_out = self.encoder(out, mask=mask)
+        out = self.encoder(out, mask=mask)
         if self.is_pool:
-            pool_out = self.pool(out)
-            outs = [pool_out]
-        else:
-            outs = [encoder_out]
-        if self.is_mlm:
-            mlm_out = self.mlm([encoder_out, self.input_embedding.token_embedding.weights])
-            outs.append(mlm_out)
+            out = self.pool(out)
+            # outs = [pool_out]
+        # else:
+        #     outs = [encoder_out]
+        # if self.is_mlm:
+        #     mlm_out = self.mlm([encoder_out, self.input_embedding.token_embedding.weights])
+        #     outs.append(mlm_out)
 
-        if len(outs) == 1:
-            return outs[0]
-        else:
-            return outs[1:]
+        return out
 
-    def _compute_mask(self, inputs):
+    def _compute_mask(self, inputs, seq2seq):
         if isinstance(inputs, list):
             assert 2 == len(inputs), "Expecting inputs to be a [input_ids, token_type_ids] list"
             input_ids, token_type_ids = inputs
         else:
             input_ids = inputs
             token_type_ids = None
-
-        return tf.cast(tf.not_equal(input_ids, 0), 'float32')
+        if seq2seq:
+            seq_len = tf.shape(token_type_ids)[1]
+            ones = tf.ones((1, self.config.num_attention_heads, seq_len, seq_len), dtype=tf.int32)
+            # 下三角
+            a_mask = tf.linalg.band_part(ones, -1, 0)
+            # [bs,1,1,seq_len,]
+            s_ex12 = tf.expand_dims(tf.expand_dims(token_type_ids, 1), 2)
+            # [bs, 1,seq_len,1]
+            s_ex13 = tf.expand_dims(tf.expand_dims(token_type_ids, 1), 3)
+            a_mask = (1 - s_ex13) * (1 - s_ex12) + s_ex13 * a_mask
+            a_mask = tf.reshape(a_mask, (-1, self.config.num_attention_heads, seq_len, seq_len))
+            return a_mask
+        else:
+            return tf.cast(tf.not_equal(input_ids, 0), 'float32')

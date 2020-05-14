@@ -23,7 +23,7 @@ test_df = pd.read_csv('../data/LCQMC/LCQMC_dev.csv')
 train_df = train_df.sample(frac=1)
 
 max_len = 20
-batch_size = 64
+batch_size = 8
 EPOCHS = 5
 
 model = load_model(checkpoint_path, dict_path, is_pool=False)

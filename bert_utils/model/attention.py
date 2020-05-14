@@ -25,9 +25,12 @@ class MultiHeadAttention(Layer):
     def call(self, inputs, training=False, mask=None):
         query, key, value = inputs
 
-        mask = tf.cast(tf.expand_dims(mask, axis=1), dtype=tf.float32)
-        ones = tf.expand_dims(tf.ones(shape=tf.shape(query)[:2], dtype=tf.float32), axis=-1)
-        attention_mask = ones * mask
+        if len(tf.shape(mask)) == 4:
+            attention_mask = mask
+        else:
+            mask = tf.cast(tf.expand_dims(mask, axis=1), dtype=tf.float32)
+            ones = tf.expand_dims(tf.ones(shape=tf.shape(query)[:2], dtype=tf.float32), axis=-1)
+            attention_mask = ones * mask
 
         query = self.q_matrix(query)
         key = self.k_matrix(key)
@@ -46,7 +49,8 @@ class MultiHeadAttention(Layer):
         out = tf.matmul(query, key, transpose_b=True) / (self.d_k ** 0.5)
 
         if attention_mask is not None:
-            attention_mask = tf.expand_dims(attention_mask, axis=1)
+            if len(tf.shape(attention_mask))!=4:
+                attention_mask = tf.expand_dims(attention_mask, axis=1)
             # {1: position, 0: mask} -> {0: position, -10000: mask}
             adder = (1.0 - tf.cast(attention_mask, dtype=tf.float32)) * -1e8
             out += adder

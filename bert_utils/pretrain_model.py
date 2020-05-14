@@ -5,18 +5,19 @@ from tensorflow.keras.layers import *
 from bert_utils.config import BertConfig
 
 
-def load_model(checkpoint_path, dict_path, is_pool=False):
-    p = PreTrainModel(checkpoint_path, dict_path, is_pool=is_pool)
-    return p.bert
+def load_model(checkpoint_path, dict_path, is_pool=False, seq2seq=False):
+    p = PreTrainModel(checkpoint_path, dict_path, is_pool=is_pool, seq2seq=seq2seq)
+    return p.model
 
 
 class PreTrainModel(object):
     def __init__(self,
                  checkpoint_path,
                  dict_path,
-                 is_pool=False):
+                 is_pool=False,
+                 seq2seq=False):
         configs = BertConfig()
-        self.bert = Bert(configs, is_pool=is_pool, name='bert')
+        self.bert = Bert(configs, is_pool=is_pool, seq2seq=seq2seq, name='bert')
         self.dict_path = dict_path
 
         input_ids = Input(shape=(None,), dtype='int32')
@@ -24,7 +25,7 @@ class PreTrainModel(object):
 
         output = self.bert([input_ids, token_type_ids])
         self.model = Model(inputs=[input_ids, token_type_ids], outputs=output)
-        self._load_check_weights(self.bert, checkpoint_path)
+        self._load_check_weights(self.model, checkpoint_path)
 
     def _map_name(self, name):
         # 如果包含embeddings:0说明是嵌入层，需要把最后的embeddings去除。其它的把结尾的0去除即可

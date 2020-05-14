@@ -155,7 +155,8 @@ class Train(object):
             self.test_accuracy(labels, predictions)
 
         train_iter = train_data.__iter__()
-        test_iter = test_data.__iter__()
+        if test_data is not None:
+            test_iter = test_data.__iter__()
         for epoch in range(self.epochs):
             self.train_loss.reset_states()
             self.train_accuracy.reset_states()
