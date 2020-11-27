@@ -139,20 +139,20 @@ class Train(object):
         @tf.function
         def train_step(inputs, labels):
             with tf.GradientTape() as tape:
-                predictions = model(inputs)
+                predictions = model(inputs, trainig=True)
                 loss = self.loss(labels, predictions)
             gradients = tape.gradient(loss, model.trainable_variables)
             self.optimizer.apply_gradients(zip(gradients, model.trainable_variables))
 
-            self.train_loss(loss)
-            self.train_accuracy(labels, predictions)
+            self.train_loss.update_state(loss)
+            self.train_accuracy.update_state(labels, predictions)
 
         @tf.function
         def eval_step(inputs, labels):
-            predictions = model(inputs)
+            predictions = model(inputs, trainig=False)
             t_loss = self.loss(labels, predictions)
-            self.test_loss(t_loss)
-            self.test_accuracy(labels, predictions)
+            self.test_loss.update_state(t_loss)
+            self.test_accuracy.update_state(labels, predictions)
 
         train_iter = train_data.__iter__()
         if test_data is not None:
@@ -176,7 +176,7 @@ class Train(object):
                                       self.train_accuracy.result() * 100))
 
             # if step != 0 and (step + 1) % 20 == 0:
-                # test
+            # test
             if test_data is not None:
                 for s in range(test_data.steps):
                     x, y = next(test_iter)
